@@ -10,10 +10,10 @@ local settings = {
     defaultcolor = Color3.fromRGB(0, 0, 139),  -- Dark Blue
     teamcheck = false,
     teamcolor = true,
-    boxESPEnabled = true,
-    tracersEnabled = true,
-    distanceESPEnabled = true,
-    nameESPEnabled = true,
+    boxESPEnabled = false,
+    tracersEnabled = false,
+    distanceESPEnabled = false,
+    nameESPEnabled = false,
     rainbowEnabled = false
 };
 
@@ -211,3 +211,12 @@ end)
 tab.newToggle("Rainbow Esp", "Enables rainbow color transition for ESP", false, function(toggleState)
     settings.rainbowEnabled = toggleState
 end)
+
+local NotificationHolder = loadstring(game:HttpGet("https://raw.githubusercontent.com/BocusLuke/UI/main/STX/Module.Lua"))()
+local Notification = loadstring(game:HttpGet("https://raw.githubusercontent.com/BocusLuke/UI/main/STX/Client.Lua"))()
+
+Notification:Notify(
+    {Title = "IMPORTANT", Description = "this scirpt is currently being worked on expect it to be fully updated by tomorrow or today"},
+    {OutlineColor = Color3.fromRGB(80, 80, 80),Time = 8, Type = "option"},
+    {Image = "http://www.roblox.com/asset/?id=6023426923", ImageColor = Color3.fromRGB(255, 84, 84), Callback = function(State) print(tostring(State)) end}
+)
