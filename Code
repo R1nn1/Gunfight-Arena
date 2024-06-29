@@ -3,7 +3,150 @@ local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/
 
 local window = DrRayLibrary:Load("Rinns Hub", "Default")
 
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Store settings
+local aimbotEnabled = false
+local wallCheckEnabled = true
+local aimbotFov = 450
+local rainbowFovEnabled = false
+local hitboxSize = 20
+local hitboxEnabled = false
+local teamCheckEnabled = true
+local flyingEnabled = false
+local speed = 50
+local keys = {W = false, A = false, S = false, D = false, Up = false, Down = false, Left = false, Right = false}
+
+-- Create UI for the circle
+local aimbotCircle = Drawing.new("Circle")
+aimbotCircle.Thickness = 2
+aimbotCircle.NumSides = 64
+aimbotCircle.Radius = aimbotFov
+aimbotCircle.Filled = false
+aimbotCircle.Visible = false
+
+-- Function to update the circle position and size
+local function updateCircle()
+    aimbotCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    aimbotCircle.Radius = aimbotFov
+    aimbotCircle.Visible = aimbotEnabled
+end
+
+-- Function to check if a player is behind a wall
+local function isBehindWall(target)
+    local origin = Camera.CFrame.Position
+    local direction = (target.Position - origin).unit * (target.Position - origin).magnitude
+    local ray = Ray.new(origin, direction)
+    local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character)
+    return hit ~= nil and hit.Parent ~= target.Parent
+end
+
+-- Function to get the closest enemy in the circle
+local function getClosestEnemy()
+    local closestEnemy = nil
+    local lowestHealth = math.huge
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and (not teamCheckEnabled or player.Team ~= LocalPlayer.Team) then
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("Humanoid") then
+                local screenPoint = Camera:WorldToViewportPoint(character.HumanoidRootPart.Position)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - aimbotCircle.Position).magnitude
+                if distance <= aimbotCircle.Radius then
+                    if not wallCheckEnabled or not isBehindWall(character.HumanoidRootPart) then
+                        if character.Humanoid.Health < lowestHealth then
+                            closestEnemy = character.HumanoidRootPart
+                            lowestHealth = character.Humanoid.Health
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestEnemy
+end
+
+-- Update the circle and check for enemies
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        updateCircle()
+        local target = getClosestEnemy()
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+        end
+    else
+        aimbotCircle.Visible = false
+    end
+end)
+
+-- Handle rainbow FOV color
+RunService.RenderStepped:Connect(function()
+    if rainbowFovEnabled and aimbotEnabled then
+        local hue = tick() % 5 / 5
+        local color = Color3.fromHSV(hue, 1, 1)
+        aimbotCircle.Color = color
+    else
+        aimbotCircle.Color = Color3.fromRGB(255, 255, 255)
+    end
+end)
+
+-- Adjust hitbox size and appearance
+RunService.RenderStepped:Connect(function()
+    if hitboxEnabled then
+        local localPlayer = Players.LocalPlayer
+        local localPlayerTeam = localPlayer.Team
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer and (not teamCheckEnabled or player.Team ~= localPlayerTeam) then
+                local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if humanoidRootPart then
+                    humanoidRootPart.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                    humanoidRootPart.Transparency = 0.5
+                    humanoidRootPart.BrickColor = BrickColor.new("Really red")
+                    humanoidRootPart.Material = Enum.Material.Plastic
+                    humanoidRootPart.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- Create GUI and configure toggles and sliders
+
 local tab = DrRayLibrary.newTab("Main Tab", "ImageIdHere")
+
+tab.newToggle("Aimbot", "Draws a circle in the middle of the screen that locks your camera on to people in the circle it has team check", true, function(toggleState)
+    aimbotEnabled = toggleState
+    aimbotCircle.Visible = toggleState
+end)
+
+tab.newToggle("Wall Check for aimbot", "If the person it's trying to lock on to is behind a wall it won't lock on to them", true, function(toggleState)
+    wallCheckEnabled = toggleState
+end)
+
+tab.newSlider("Aimbot Fov Slider", "Changes how big the aimbot fov is", 450, false, function(num)
+    aimbotFov = num
+    updateCircle()
+end)
+
+tab.newToggle("Rainbow aimbot Fov", "changes the circle color for the aimbot to rainbow", true, function(toggleState)
+    rainbowFovEnabled = toggleState
+end)
+
+tab.newToggle("Hitbox Expander", "Enables hitbox expanding for enemies", true, function(toggleState)
+    hitboxEnabled = toggleState
+end)
+
+tab.newSlider("Hitbox Size Slider", "Changes the size of the enemy hitbox", 50, false, function(num)
+    hitboxSize = num
+end)
+
+tab.newToggle("Team Check", "Enables team check for aimbot and hitbox expander", true, function(toggleState)
+    teamCheckEnabled = toggleState
+end)
 
 -- settings
 local settings = {
@@ -212,11 +355,12 @@ tab.newToggle("Rainbow Esp", "Enables rainbow color transition for ESP", false, 
     settings.rainbowEnabled = toggleState
 end)
 
+
 local NotificationHolder = loadstring(game:HttpGet("https://raw.githubusercontent.com/BocusLuke/UI/main/STX/Module.Lua"))()
 local Notification = loadstring(game:HttpGet("https://raw.githubusercontent.com/BocusLuke/UI/main/STX/Client.Lua"))()
 
 Notification:Notify(
-    {Title = "IMPORTANT", Description = "this scirpt is currently being worked on expect it to be fully updated by tomorrow or today"},
+    {Title = "IMPORTANT", Description = "If any of the toggles are already green turn it off then turn it on for the feature to work black = off green = on"},
     {OutlineColor = Color3.fromRGB(80, 80, 80),Time = 8, Type = "option"},
     {Image = "http://www.roblox.com/asset/?id=6023426923", ImageColor = Color3.fromRGB(255, 84, 84), Callback = function(State) print(tostring(State)) end}
 )
